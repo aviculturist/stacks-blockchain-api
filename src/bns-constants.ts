@@ -15,8 +15,8 @@ export const BnsErrors = {
 
 export const printTopic = 'print';
 export const enum BnsContractIdentifier {
-  mainnet = 'SP000000000000000000002Q6VF78.bns',
-  testnet = 'ST000000000000000000002AMW42H.bns',
+  mainnet = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.bns',
+  testnet = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.bns',
 }
 export const namespaceReadyFunction = 'namespace-ready';
 export const nameFunctions = [
