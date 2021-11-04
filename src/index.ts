@@ -6,13 +6,20 @@ import {
   isProdEnv,
   numberToHex,
   httpPostRequest,
+  isReadOnlyMode,
 } from './helpers';
 import * as sourceMapSupport from 'source-map-support';
 import { DataStore } from './datastore/common';
 import { cycleMigrations, dangerousDropAllTables, PgDataStore } from './datastore/postgres-store';
 import { MemoryDataStore } from './datastore/memory-store';
 import { startApiServer } from './api/init';
+import { startProfilerServer } from './inspector-util';
 import { startEventServer } from './event-stream/event-server';
+import {
+  isFtMetadataEnabled,
+  isNftMetadataEnabled,
+  TokensProcessorQueue,
+} from './event-stream/tokens-contract-handler';
 import { StacksCoreRpcClient } from './core-rpc/client';
 import { createServer as createPrometheusServer } from '@promster/server';
 import { ChainID } from '@stacks/transactions';
@@ -86,7 +93,8 @@ async function init(): Promise<void> {
       }
       case 'pg':
       case undefined: {
-        db = await PgDataStore.connect();
+        const skipMigrations = isReadOnlyMode;
+        db = await PgDataStore.connect(skipMigrations);
         break;
       }
       default: {
@@ -96,45 +104,63 @@ async function init(): Promise<void> {
       }
     }
 
-    if (db instanceof PgDataStore) {
-      if (isProdEnv) {
-        await importV1TokenOfferingData(db);
-      } else {
-        logger.warn(
-          `Notice: skipping token offering data import because of non-production NODE_ENV`
+    if (!isReadOnlyMode) {
+      if (db instanceof PgDataStore) {
+        if (isProdEnv) {
+          await importV1TokenOfferingData(db);
+        } else {
+          logger.warn(
+            `Notice: skipping token offering data import because of non-production NODE_ENV`
+          );
+        }
+        if (isProdEnv && !process.env.BNS_IMPORT_DIR) {
+          logger.warn(`Notice: full BNS functionality requires 'BNS_IMPORT_DIR' to be set.`);
+        } else if (process.env.BNS_IMPORT_DIR) {
+          await importV1BnsData(db, process.env.BNS_IMPORT_DIR);
+        }
+      }
+
+      const configuredChainID = getConfiguredChainID();
+
+      const eventServer = await startEventServer({
+        datastore: db,
+        chainId: configuredChainID,
+      });
+      registerShutdownConfig({
+        name: 'Event Server',
+        handler: () => eventServer.closeAsync(),
+        forceKillable: false,
+      });
+
+      const networkChainId = await getCoreChainID();
+      if (networkChainId !== configuredChainID) {
+        const chainIdConfig = numberToHex(configuredChainID);
+        const chainIdNode = numberToHex(networkChainId);
+        const error = new Error(
+          `The configured STACKS_CHAIN_ID does not match, configured: ${chainIdConfig}, stacks-node: ${chainIdNode}`
         );
+        logError(error.message, error);
+        throw error;
       }
-      if (isProdEnv && !process.env.BNS_IMPORT_DIR) {
-        logger.warn(`Notice: full BNS functionality requires 'BNS_IMPORT_DIR' to be set.`);
-      } else if (process.env.BNS_IMPORT_DIR) {
-        await importV1BnsData(db, process.env.BNS_IMPORT_DIR);
+      monitorCoreRpcConnection().catch(error => {
+        logger.error(`Error monitoring RPC connection: ${error}`, error);
+      });
+
+      if (isFtMetadataEnabled() || isNftMetadataEnabled()) {
+        const tokenMetadataProcessor = new TokensProcessorQueue(db, configuredChainID);
+        registerShutdownConfig({
+          name: 'Token Metadata Processor',
+          handler: () => tokenMetadataProcessor.close(),
+          forceKillable: true,
+        });
+        // check if db has any non-processed token queues and await them all here
+        await tokenMetadataProcessor.drainDbQueue();
       }
     }
+  }
 
-    const configuredChainID = getConfiguredChainID();
-    const eventServer = await startEventServer({
-      datastore: db,
-      chainId: configuredChainID,
-    });
-    registerShutdownConfig({
-      name: 'Event Server',
-      handler: () => eventServer.closeAsync(),
-      forceKillable: false,
-    });
-
-    const networkChainId = await getCoreChainID();
-    if (networkChainId !== configuredChainID) {
-      const chainIdConfig = numberToHex(configuredChainID);
-      const chainIdNode = numberToHex(networkChainId);
-      const error = new Error(
-        `The configured STACKS_CHAIN_ID does not match, configured: ${chainIdConfig}, stacks-node: ${chainIdNode}`
-      );
-      logError(error.message, error);
-      throw error;
-    }
-    monitorCoreRpcConnection().catch(error => {
-      logger.error(`Error monitoring RPC connection: ${error}`, error);
-    });
+  if (isProdEnv && !fs.existsSync('.git-info')) {
+    throw new Error(`Git info file not found`);
   }
 
   const apiServer = await startApiServer({ datastore: db, chainId: getConfiguredChainID() });
@@ -145,6 +171,16 @@ async function init(): Promise<void> {
     forceKillable: true,
     forceKillHandler: () => apiServer.forceKill(),
   });
+
+  const profilerHttpServerPort = process.env['STACKS_PROFILER_PORT'];
+  if (profilerHttpServerPort) {
+    const profilerServer = await startProfilerServer(profilerHttpServerPort);
+    registerShutdownConfig({
+      name: 'Profiler server',
+      handler: () => profilerServer.close(),
+      forceKillable: false,
+    });
+  }
 
   registerShutdownConfig({
     name: 'DB',
@@ -249,7 +285,7 @@ async function handleProgramArgs() {
     // or the `--force` option can be used.
     await cycleMigrations({ dangerousAllowDataLoss: true });
 
-    const db = await PgDataStore.connect(true);
+    const db = await PgDataStore.connect(true, false);
     const eventServer = await startEventServer({
       datastore: db,
       chainId: getConfiguredChainID(),

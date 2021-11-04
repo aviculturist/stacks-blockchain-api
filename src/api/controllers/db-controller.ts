@@ -4,7 +4,6 @@ import {
   ClarityAbi,
   cvToString,
   deserializeCV,
-  getCVTypeString,
   getTypeString,
   serializeCV,
 } from '@stacks/transactions';
@@ -14,22 +13,18 @@ import {
   AbstractTransaction,
   BaseTransaction,
   Block,
-  CoinbaseTransaction,
   CoinbaseTransactionMetadata,
   ContractCallTransaction,
   ContractCallTransactionMetadata,
   MempoolTransaction,
   MempoolTransactionStatus,
   Microblock,
-  PoisonMicroblockTransaction,
   PoisonMicroblockTransactionMetadata,
   RosettaBlock,
-  RosettaOperation,
   RosettaParentBlockIdentifier,
   RosettaTransaction,
   SmartContractTransaction,
   SmartContractTransactionMetadata,
-  TokenTransferTransaction,
   TokenTransferTransactionMetadata,
   Transaction,
   TransactionAnchorModeType,
@@ -46,7 +41,6 @@ import {
 
 import {
   BlockIdentifier,
-  BaseTx,
   DataStore,
   DbAssetEventTypeId,
   DbBlock,
@@ -70,7 +64,7 @@ import {
 } from '../../helpers';
 import { readClarityValueArray, readTransactionPostConditions } from '../../p2p/tx';
 import { serializePostCondition, serializePostConditionMode } from '../serializers/post-conditions';
-import { getOperations, processEvents, processUnlockingEvents } from '../../rosetta-helpers';
+import { getOperations, parseTransactionMemo, processUnlockingEvents } from '../../rosetta-helpers';
 
 export function parseTxTypeStrings(values: string[]): TransactionType[] {
   return values.map(v => {
@@ -466,6 +460,11 @@ export function parseDbBlock(
     txs: [...txIds],
     microblocks_accepted: [...microblocksAccepted],
     microblocks_streamed: [...microblocksStreamed],
+    execution_cost_read_count: dbBlock.execution_cost_read_count,
+    execution_cost_read_length: dbBlock.execution_cost_read_length,
+    execution_cost_runtime: dbBlock.execution_cost_runtime,
+    execution_cost_write_count: dbBlock.execution_cost_write_count,
+    execution_cost_write_length: dbBlock.execution_cost_write_length,
   };
   return apiBlock;
 }
@@ -489,6 +488,8 @@ export async function getRosettaBlockTransactionsFromDataStore(opts: {
     return { found: false };
   }
 
+  const unlockingEvents = await opts.db.getUnlockedAddressesAtBlock(blockQuery.result);
+
   const transactions: RosettaTransaction[] = [];
 
   for (const tx of txsQuery.result) {
@@ -503,24 +504,18 @@ export async function getRosettaBlockTransactionsFromDataStore(opts: {
       });
       events = eventsQuery.results;
     }
-
-    const operations = await getOperations(tx, opts.db, minerRewards, events);
-
-    transactions.push({
+    const operations = await getOperations(tx, opts.db, minerRewards, events, unlockingEvents);
+    const txMemo = parseTransactionMemo(tx);
+    const rosettaTx: RosettaTransaction = {
       transaction_identifier: { hash: tx.tx_id },
       operations: operations,
-    });
-  }
-
-  // Search for unlocking events
-  const unlockingEvents = await opts.db.getUnlockedAddressesAtBlock(blockQuery.result);
-  if (unlockingEvents.length > 0) {
-    const operations: RosettaOperation[] = [];
-    processUnlockingEvents(unlockingEvents, operations);
-    transactions.push({
-      transaction_identifier: { hash: unlockingEvents[0].tx_id }, // All unlocking events share the same tx_id
-      operations: operations,
-    });
+    };
+    if (txMemo) {
+      rosettaTx.metadata = {
+        memo: txMemo,
+      };
+    }
+    transactions.push(rosettaTx);
   }
 
   return { found: true, result: transactions };
@@ -555,6 +550,7 @@ export async function getRosettaTransactionFromDataStore(
   const result: RosettaTransaction = {
     transaction_identifier: rosettaTx.transaction_identifier,
     operations: rosettaTx.operations,
+    metadata: rosettaTx.metadata,
   };
   return { found: true, result };
 }
@@ -562,6 +558,10 @@ export async function getRosettaTransactionFromDataStore(
 export interface GetTxArgs {
   txId: string;
   includeUnanchored: boolean;
+}
+
+export interface GetTxFromDbTxArgs extends GetTxArgs {
+  dbTx: DbTx;
 }
 
 export interface GetTxWithEventsArgs extends GetTxArgs {
@@ -718,6 +718,11 @@ function parseDbAbstractTx(dbTx: DbTx, baseTx: BaseTransaction): AbstractTransac
     microblock_canonical: dbTx.microblock_canonical,
     event_count: dbTx.event_count,
     events: [],
+    execution_cost_read_count: dbTx.execution_cost_read_count,
+    execution_cost_read_length: dbTx.execution_cost_read_length,
+    execution_cost_runtime: dbTx.execution_cost_runtime,
+    execution_cost_write_count: dbTx.execution_cost_write_count,
+    execution_cost_write_length: dbTx.execution_cost_write_length,
   };
   return abstractTx;
 }
@@ -782,14 +787,19 @@ export async function getMempoolTxFromDataStore(
 
 export async function getTxFromDataStore(
   db: DataStore,
-  args: GetTxArgs | GetTxWithEventsArgs
+  args: GetTxArgs | GetTxWithEventsArgs | GetTxFromDbTxArgs
 ): Promise<FoundOrNot<Transaction>> {
-  const txQuery = await db.getTx({ txId: args.txId, includeUnanchored: args.includeUnanchored });
-  if (!txQuery.found) {
-    return { found: false };
+  let dbTx: DbTx;
+  if ('dbTx' in args) {
+    dbTx = args.dbTx;
+  } else {
+    const txQuery = await db.getTx({ txId: args.txId, includeUnanchored: args.includeUnanchored });
+    if (!txQuery.found) {
+      return { found: false };
+    }
+    dbTx = txQuery.result;
   }
 
-  const dbTx = txQuery.result;
   const parsedTx = parseDbTx(dbTx);
 
   // If tx type is contract-call then fetch additional contract ABI details for a richer response

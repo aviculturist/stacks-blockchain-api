@@ -28,13 +28,16 @@ import {
   DbBnsSubdomain,
   DbConfigState,
   DbMinerReward,
-  DbTxWithStxTransfers,
+  DbTxWithAssetTransfers,
   DataStoreMicroblockUpdateData,
   DbMicroblock,
   DbGetBlockWithMetadataOpts,
   DbGetBlockWithMetadataResponse,
   BlockIdentifier,
   StxUnlockEvent,
+  DbFungibleTokenMetadata,
+  DbNonFungibleTokenMetadata,
+  DbTokenMetadataQueueEntry,
 } from './common';
 import { logger, FoundOrNot } from '../helpers';
 import { AddressTokenOfferingLocked, TransactionType } from '@stacks/stacks-blockchain-api-types';
@@ -97,13 +100,9 @@ export class MemoryDataStore
         await this.updateSmartContract(entry.tx, smartContract);
       }
     }
-    const txIdList = data.txs
-      .map(({ tx }) => ({ txId: tx.tx_id, txIndex: tx.tx_index }))
-      .sort((a, b) => a.txIndex - b.txIndex)
-      .map(tx => tx.txId);
-    this.emit('blockUpdate', data.block, txIdList, [], []);
+    this.emit('blockUpdate', data.block.block_hash, [], []);
     data.txs.forEach(entry => {
-      this.emit('txUpdate', entry.tx);
+      this.emit('txUpdate', entry.tx.tx_id);
     });
   }
 
@@ -114,7 +113,7 @@ export class MemoryDataStore
   getNameCanonical(txId: string, indexBlockHash: string): Promise<FoundOrNot<boolean>> {
     throw new Error('Method not implemented.');
   }
-  resolveBnsNames(zonefile: string, atch_resolved: boolean, tx_id: string): Promise<void> {
+  updateZoneContent(zonefile: string, zonefile_hash: string, tx_id: string): Promise<void> {
     throw new Error('Method not implemented.');
   }
   resolveBnsSubdomains(
@@ -308,7 +307,7 @@ export class MemoryDataStore
   updateMempoolTxs({ mempoolTxs: txs }: { mempoolTxs: DbMempoolTx[] }): Promise<void> {
     txs.forEach(tx => {
       this.txMempool.set(tx.tx_id, tx);
-      this.emit('txUpdate', tx);
+      this.emit('txUpdate', tx.tx_id);
     });
     return Promise.resolve();
   }
@@ -319,7 +318,7 @@ export class MemoryDataStore
       if (tx) {
         tx.status = args.status;
         this.txMempool.set(txId, tx);
-        this.emit('txUpdate', tx);
+        this.emit('txUpdate', tx.tx_id);
       }
     });
     return Promise.resolve();
@@ -517,16 +516,16 @@ export class MemoryDataStore
   getInformationTxsWithStxTransfers(args: {
     stxAddress: string;
     tx_id: string;
-  }): Promise<DbTxWithStxTransfers> {
+  }): Promise<DbTxWithAssetTransfers> {
     throw new Error('not yet implemented');
   }
 
-  getAddressTxsWithStxTransfers(args: {
+  getAddressTxsWithAssetTransfers(args: {
     stxAddress: string;
-    limit: number;
-    offset: number;
+    limit?: number;
+    offset?: number;
     blockHeight?: number;
-  }): Promise<{ results: DbTxWithStxTransfers[]; total: number }> {
+  }): Promise<{ results: DbTxWithAssetTransfers[]; total: number }> {
     throw new Error('not yet implemented');
   }
 
@@ -701,5 +700,38 @@ export class MemoryDataStore
 
   close() {
     return Promise.resolve();
+  }
+  getFtMetadata(contractId: string): Promise<FoundOrNot<DbFungibleTokenMetadata>> {
+    throw new Error('Method not implemented.');
+  }
+  getNftMetadata(contractId: string): Promise<FoundOrNot<DbNonFungibleTokenMetadata>> {
+    throw new Error('Method not implemented.');
+  }
+  updateNFtMetadata(nftMetadata: DbNonFungibleTokenMetadata): Promise<number> {
+    throw new Error('Method not implemented.');
+  }
+  updateFtMetadata(ftMetadata: DbFungibleTokenMetadata): Promise<number> {
+    throw new Error('Method not implemented.');
+  }
+
+  getFtMetadataList(args: {
+    limit: number;
+    offset: number;
+  }): Promise<{ results: DbFungibleTokenMetadata[]; total: number }> {
+    throw new Error('Method not implemented.');
+  }
+
+  getNftMetadataList(args: {
+    limit: number;
+    offset: number;
+  }): Promise<{ results: DbNonFungibleTokenMetadata[]; total: number }> {
+    throw new Error('Method not implemented.');
+  }
+
+  getTokenMetadataQueue(
+    _limit: number,
+    _excludingEntries: number[]
+  ): Promise<DbTokenMetadataQueueEntry[]> {
+    throw new Error('Method not implemented.');
   }
 }

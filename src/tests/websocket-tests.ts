@@ -63,6 +63,11 @@ describe('websocket notifications', () => {
       miner_txid: '0x4321',
       canonical: true,
       parent_microblock_sequence: 0,
+      execution_cost_read_count: 0,
+      execution_cost_read_length: 0,
+      execution_cost_runtime: 0,
+      execution_cost_write_count: 0,
+      execution_cost_write_length: 0,
     };
 
     const tx: DbTx = {
@@ -95,6 +100,11 @@ describe('websocket notifications', () => {
       microblock_canonical: true,
       microblock_sequence: I32_MAX,
       microblock_hash: '',
+      execution_cost_read_count: 0,
+      execution_cost_read_length: 0,
+      execution_cost_runtime: 0,
+      execution_cost_write_count: 0,
+      execution_cost_write_length: 0,
     };
 
     const mempoolTx: DbMempoolTx = {
@@ -179,7 +189,7 @@ describe('websocket notifications', () => {
       // update DB with TX after WS server is sent txid to monitor
       // tx.status = DbTxStatus.Success;
       // await db.update(dbUpdate);
-      db.emit('txUpdate', { ...tx, status: DbTxStatus.Pending });
+      db.emit('txUpdate', tx.tx_id);
 
       // check for tx update notification
       const txStatus2 = await txUpdates[1];
@@ -192,7 +202,7 @@ describe('websocket notifications', () => {
       });
 
       // ensure tx updates no longer received
-      db.emit('txUpdate', { ...tx, status: DbTxStatus.Pending });
+      db.emit('txUpdate', tx.tx_id);
       await new Promise(resolve => setImmediate(resolve));
       expect(txUpdates[2].isFinished).toBe(false);
     } finally {
@@ -215,6 +225,11 @@ describe('websocket notifications', () => {
       miner_txid: '0x4321',
       canonical: true,
       parent_microblock_sequence: 0,
+      execution_cost_read_count: 0,
+      execution_cost_read_length: 0,
+      execution_cost_runtime: 0,
+      execution_cost_write_count: 0,
+      execution_cost_write_length: 0,
     };
 
     const tx: DbTx = {
@@ -225,7 +240,7 @@ describe('websocket notifications', () => {
       raw_tx: Buffer.from('raw-tx-test'),
       index_block_hash: '0x5432',
       block_hash: '0x9876',
-      block_height: 68456,
+      block_height: 1,
       burn_block_time: 2837565,
       parent_burn_block_time: 1626122935,
       type_id: DbTxTypeId.TokenTransfer,
@@ -247,6 +262,11 @@ describe('websocket notifications', () => {
       microblock_canonical: true,
       microblock_sequence: I32_MAX,
       microblock_hash: '',
+      execution_cost_read_count: 0,
+      execution_cost_read_length: 0,
+      execution_cost_runtime: 0,
+      execution_cost_write_count: 0,
+      execution_cost_write_length: 0,
     };
 
     const mempoolTx: DbMempoolTx = {
@@ -356,6 +376,11 @@ describe('websocket notifications', () => {
       miner_txid: '0x004321',
       canonical: true,
       parent_microblock_sequence: 0,
+      execution_cost_read_count: 0,
+      execution_cost_read_length: 0,
+      execution_cost_runtime: 0,
+      execution_cost_write_count: 0,
+      execution_cost_write_length: 0,
     };
 
     const tx: DbTx = {
@@ -388,6 +413,11 @@ describe('websocket notifications', () => {
       microblock_canonical: true,
       microblock_sequence: I32_MAX,
       microblock_hash: '',
+      execution_cost_read_count: 0,
+      execution_cost_read_length: 0,
+      execution_cost_runtime: 0,
+      execution_cost_write_count: 0,
+      execution_cost_write_length: 0,
     };
 
     const stxEvent: DbStxEvent = {
@@ -484,6 +514,11 @@ describe('websocket notifications', () => {
       miner_txid: '0x4321',
       canonical: true,
       parent_microblock_sequence: 0,
+      execution_cost_read_count: 0,
+      execution_cost_read_length: 0,
+      execution_cost_runtime: 0,
+      execution_cost_write_count: 0,
+      execution_cost_write_length: 0,
     };
 
     const tx: DbTx = {
@@ -494,7 +529,7 @@ describe('websocket notifications', () => {
       raw_tx: Buffer.from('raw-tx-test'),
       index_block_hash: '0x5432',
       block_hash: '0x9876',
-      block_height: 68456,
+      block_height: 1,
       burn_block_time: 2837565,
       parent_burn_block_time: 1626122935,
       type_id: DbTxTypeId.TokenTransfer,
@@ -516,6 +551,11 @@ describe('websocket notifications', () => {
       microblock_canonical: true,
       microblock_sequence: I32_MAX,
       microblock_hash: '',
+      execution_cost_read_count: 0,
+      execution_cost_read_length: 0,
+      execution_cost_runtime: 0,
+      execution_cost_write_count: 0,
+      execution_cost_write_length: 0,
     };
 
     const stxEvent: DbStxEvent = {
@@ -590,6 +630,11 @@ describe('websocket notifications', () => {
       miner_txid: '0x4321',
       canonical: true,
       parent_microblock_sequence: 0,
+      execution_cost_read_count: 0,
+      execution_cost_read_length: 0,
+      execution_cost_runtime: 0,
+      execution_cost_write_count: 0,
+      execution_cost_write_length: 0,
     };
 
     const tx: DbTx = {
@@ -622,6 +667,11 @@ describe('websocket notifications', () => {
       microblock_canonical: true,
       microblock_sequence: I32_MAX,
       microblock_hash: '',
+      execution_cost_read_count: 0,
+      execution_cost_read_length: 0,
+      execution_cost_runtime: 0,
+      execution_cost_write_count: 0,
+      execution_cost_write_length: 0,
     };
 
     const mempoolTx: DbMempoolTx = {

@@ -75,7 +75,7 @@ export function createTxRouter(db: DataStore): RouterWithAsync {
 
     // TODO: use getBlockWithMetadata or similar to avoid transaction integrity issues from lazy resolving block tx data (primarily the contract-call ABI data)
     const results = await Bluebird.mapSeries(txResults, async tx => {
-      const txQuery = await getTxFromDataStore(db, { txId: tx.tx_id, includeUnanchored });
+      const txQuery = await getTxFromDataStore(db, { txId: tx.tx_id, dbTx: tx, includeUnanchored });
       if (!txQuery.found) {
         throw new Error('unexpected tx not found -- fix tx enumeration query');
       }
@@ -194,8 +194,8 @@ export function createTxRouter(db: DataStore): RouterWithAsync {
     };
 
     // EventEmitters don't like being passed Promise functions so wrap the async handler
-    const onTxUpdate = (txInfo: DbTx | DbMempoolTx): void => {
-      void dbTxUpdate(txInfo.tx_id);
+    const onTxUpdate = (txId: string): void => {
+      void dbTxUpdate(txId);
     };
 
     const endWaiter = waiter();
@@ -258,7 +258,11 @@ export function createTxRouter(db: DataStore): RouterWithAsync {
     const dbTxs = await db.getTxsFromBlock(block_hash, limit, offset);
 
     const results = await Bluebird.mapSeries(dbTxs.results, async tx => {
-      const txQuery = await getTxFromDataStore(db, { txId: tx.tx_id, includeUnanchored: true });
+      const txQuery = await getTxFromDataStore(db, {
+        txId: tx.tx_id,
+        dbTx: tx,
+        includeUnanchored: true,
+      });
       if (!txQuery.found) {
         throw new Error('unexpected tx not found -- fix tx enumeration query');
       }
@@ -291,7 +295,11 @@ export function createTxRouter(db: DataStore): RouterWithAsync {
     const dbTxs = await db.getTxsFromBlock(blockHash.result.block_hash, limit, offset);
 
     const results = await Bluebird.mapSeries(dbTxs.results, async tx => {
-      const txQuery = await getTxFromDataStore(db, { txId: tx.tx_id, includeUnanchored: true });
+      const txQuery = await getTxFromDataStore(db, {
+        txId: tx.tx_id,
+        dbTx: tx,
+        includeUnanchored: true,
+      });
       if (!txQuery.found) {
         throw new Error('unexpected tx not found -- fix tx enumeration query');
       }

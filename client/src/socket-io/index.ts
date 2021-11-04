@@ -62,7 +62,10 @@ export class StacksApiSocketClient {
       subscriptions.delete(topic);
     }
     // Update the subscriptions in the socket handshake so topics are persisted on re-connect.
-    this.socket.io.opts.query!.subscriptions = Array.from(subscriptions).join(',');
+    if (this.socket.io.opts.query === undefined) {
+      this.socket.io.opts.query = {};
+    }
+    this.socket.io.opts.query.subscriptions = Array.from(subscriptions).join(',');
     return {
       unsubscribe: () => {
         this.handleSubscription(topic, false);
@@ -76,6 +79,14 @@ export class StacksApiSocketClient {
 
   unsubscribeBlocks() {
     this.handleSubscription('block', false);
+  }
+
+  subscribeMicroblocks() {
+    return this.handleSubscription('microblock', true);
+  }
+
+  unsubscribeMicroblocks() {
+    this.handleSubscription('microblock', false);
   }
 
   subscribeMempool() {
@@ -107,6 +118,7 @@ export class StacksApiSocketClient {
     this.socket.on('disconnect', reason => console.warn('disconnected', reason));
     this.socket.on('connect_error', error => console.error('connect_error', error));
     this.socket.on('block', block => console.log('block', block));
+    this.socket.on('microblock', microblock => console.log('microblock', microblock));
     this.socket.on('mempool', tx => console.log('mempool', tx));
     this.socket.on('address-transaction', (address, data) =>
       console.log('address-transaction', address, data)

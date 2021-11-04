@@ -1,3 +1,128 @@
+# [0.71.0](https://github.com/blockstack/stacks-blockchain-api/compare/v0.70.1...v0.71.0) (2021-11-01)
+
+
+### Bug Fixes
+
+* export api version variable for resolution ([5134183](https://github.com/blockstack/stacks-blockchain-api/commit/5134183a33afda7ebf49a9d6d582e69bb084c7c6))
+
+
+### Features
+
+* production-capable CPU profiling [#641](https://github.com/blockstack/stacks-blockchain-api/issues/641) ([edb8d12](https://github.com/blockstack/stacks-blockchain-api/commit/edb8d121d1e9e031841ccb364362892c4748fc05))
+
+## [0.70.1](https://github.com/blockstack/stacks-blockchain-api/compare/v0.70.0...v0.70.1) (2021-10-22)
+
+
+### Bug Fixes
+
+* api versioning ([4ade5ee](https://github.com/blockstack/stacks-blockchain-api/commit/4ade5ee39bba1210845127a7d051e63736f13243))
+* microblock related re-org bug causing txs to be incorrectly orphaned [#804](https://github.com/blockstack/stacks-blockchain-api/issues/804) [#818](https://github.com/blockstack/stacks-blockchain-api/issues/818) ([bae619d](https://github.com/blockstack/stacks-blockchain-api/commit/bae619d653e559909c10e08bfa1d1ad2647ee7de))
+
+# [0.70.0](https://github.com/blockstack/stacks-blockchain-api/compare/v0.69.0...v0.70.0) (2021-10-20)
+
+
+### Bug Fixes
+
+* **docs:** ensure naming convention is followed ([ff7f9d3](https://github.com/blockstack/stacks-blockchain-api/commit/ff7f9d347264796b297fae838011fbd18d7a5759))
+* rosetta account/balance speed ([c49a4d4](https://github.com/blockstack/stacks-blockchain-api/commit/c49a4d4a1d7ac34d2b41c54684568087a846c097))
+* socket.io incorrect microblock and mempool updates ([95d4108](https://github.com/blockstack/stacks-blockchain-api/commit/95d4108d0b8c851ff423a2ee367cbd1dd1e35010))
+
+
+### Features
+
+* add broadcast/confirmed tx logs ([26e50fd](https://github.com/blockstack/stacks-blockchain-api/commit/26e50fd1b06b2afdc357ff662395ab5c02d16c87))
+* set api version in openapi schema automatically ([1b9126e](https://github.com/blockstack/stacks-blockchain-api/commit/1b9126e73da7efd2b911e779a9e7481cb6101996))
+
+# [0.69.0](https://github.com/blockstack/stacks-blockchain-api/compare/v0.68.0...v0.69.0) (2021-10-05)
+
+
+### Bug Fixes
+
+* **bns:** save new owner in the db in case of name-transfer [#779](https://github.com/blockstack/stacks-blockchain-api/issues/779) ([37efffc](https://github.com/blockstack/stacks-blockchain-api/commit/37efffcdf3bfaa16ae30798d2523c1225d2fbc67))
+* move zonefiles into new table [#621](https://github.com/blockstack/stacks-blockchain-api/issues/621) ([0f46131](https://github.com/blockstack/stacks-blockchain-api/commit/0f4613169cf9b50be869540b95a1cf9409d767c8))
+* removed regtest references [#784](https://github.com/blockstack/stacks-blockchain-api/issues/784) ([13c33e5](https://github.com/blockstack/stacks-blockchain-api/commit/13c33e5475686d3f19908a93ba4cddf672374856))
+
+
+### Features
+
+* add microblock update support to socket-io ([204d797](https://github.com/blockstack/stacks-blockchain-api/commit/204d7979a96c3f29b5ec21ff4680ecb64871c3fb))
+* add read-only mode ([d1adca4](https://github.com/blockstack/stacks-blockchain-api/commit/d1adca4d5001b7b592fb917e27e1cadceb73d567))
+* added execution cost to block response [#735](https://github.com/blockstack/stacks-blockchain-api/issues/735) ([8d2d86f](https://github.com/blockstack/stacks-blockchain-api/commit/8d2d86f972bef61e42f45a7e09cc847e046d0df1))
+
+# [0.68.0](https://github.com/blockstack/stacks-blockchain-api/compare/v0.67.1...v0.68.0) (2021-09-20)
+
+
+### Bug Fixes
+
+* return the latest name by address [#714](https://github.com/blockstack/stacks-blockchain-api/issues/714) ([101922b](https://github.com/blockstack/stacks-blockchain-api/commit/101922bc843140fbe5df2113f2e7d396925cbb40))
+
+
+### Features
+
+* ability to configure multiple tx broadcast endpoints [#765](https://github.com/blockstack/stacks-blockchain-api/issues/765) ([8a9222a](https://github.com/blockstack/stacks-blockchain-api/commit/8a9222a3cb6ba47ee2c90473e34f433b88e73572))
+
+## [0.67.1](https://github.com/blockstack/stacks-blockchain-api/compare/v0.67.0...v0.67.1) (2021-09-17)
+
+
+### Bug Fixes
+
+* ignore out of order microblocks causing API to crash ([1e0b3d0](https://github.com/blockstack/stacks-blockchain-api/commit/1e0b3d0e18ca8e98f6a602d173b8cef9b1b9652b))
+
+# [0.67.0](https://github.com/blockstack/stacks-blockchain-api/compare/v0.66.1...v0.67.0) (2021-09-16)
+
+
+### Bug Fixes
+
+* **rosetta:** use coinbase txs hash instead of stx_lock for forged unlock_transaction [#760](https://github.com/blockstack/stacks-blockchain-api/issues/760) ([37adcc7](https://github.com/blockstack/stacks-blockchain-api/commit/37adcc70aa55e58c9ad3dd0684b24972130fa6d4))
+* disable http keep-alive for stacks-node /v2 proxied endpoints ([cebeda0](https://github.com/blockstack/stacks-blockchain-api/commit/cebeda0e376dd7afd6729b2cd525e3c2373f27cd))
+* increase the 10 second cap on prometheus http metric reporting ([735874e](https://github.com/blockstack/stacks-blockchain-api/commit/735874e45c1e198724e7d01ca9e4eec4d108706c))
+* replicate query optimizations to other asset txs queries ([05c9931](https://github.com/blockstack/stacks-blockchain-api/commit/05c9931b6168aed48ae8c980d4d882002ad34a49))
+
+
+### Features
+
+* automatically generate postman collection from the openapi spec ([5f07d74](https://github.com/blockstack/stacks-blockchain-api/commit/5f07d7455fefa61f3f7d35e05e56b06da28987db))
+* **rosetta:** support memos in stx token transfer operations [#752](https://github.com/blockstack/stacks-blockchain-api/issues/752) ([6f4f3e2](https://github.com/blockstack/stacks-blockchain-api/commit/6f4f3e2a9129975a5252b5e33cf18168ec1c0acf))
+
+## [0.66.1](https://github.com/blockstack/stacks-blockchain-api/compare/v0.66.0...v0.66.1) (2021-09-09)
+
+
+### Bug Fixes
+
+* support post in api status endpoint ([7dcb019](https://github.com/blockstack/stacks-blockchain-api/commit/7dcb01901bccdfc50d97bc68a0cdebf9d431307d))
+
+# [0.66.0](https://github.com/blockstack/stacks-blockchain-api/compare/v0.65.0...v0.66.0) (2021-09-09)
+
+
+### Bug Fixes
+
+* optimize query that retrieves txs with asset transfers ([821f578](https://github.com/blockstack/stacks-blockchain-api/commit/821f578792454737700b2960e0167d1b974c3819))
+* **rosetta:** do not assume encoding of delegate-stx `pox_addr` data [#732](https://github.com/blockstack/stacks-blockchain-api/issues/732) ([a97bd6f](https://github.com/blockstack/stacks-blockchain-api/commit/a97bd6f0d23bc32f3d13b5840f3d41bffaaf79ee))
+
+
+### Features
+
+* added a new endpoint fee_rate [#729](https://github.com/blockstack/stacks-blockchain-api/issues/729) ([7c09ac5](https://github.com/blockstack/stacks-blockchain-api/commit/7c09ac53a9886f7369ff95bd1781eca1f744c054))
+
+# [0.65.0](https://github.com/blockstack/stacks-blockchain-api/compare/v0.64.2...v0.65.0) (2021-09-07)
+
+
+### Bug Fixes
+
+* added types for search endpoint [#645](https://github.com/blockstack/stacks-blockchain-api/issues/645) ([7cc78fb](https://github.com/blockstack/stacks-blockchain-api/commit/7cc78fb5733930d5d3c2b5c7c773dabd4bdeb294))
+* short summaries for BNS endpoints ([e37b5af](https://github.com/blockstack/stacks-blockchain-api/commit/e37b5afbf57ca4d0c183b05eae6e14f87ebc3afd))
+* sql optimizations to speed up various tx queries ([10b1c67](https://github.com/blockstack/stacks-blockchain-api/commit/10b1c67d20b99f7c57a6b2c4657faf5019b59745))
+* **rosetta:** change sender and receiver operations to token_transfer [#683](https://github.com/blockstack/stacks-blockchain-api/issues/683) ([91856c8](https://github.com/blockstack/stacks-blockchain-api/commit/91856c865598f11c358165ead9f39bd4a73f9128))
+
+
+### Features
+
+* add execution cost data to transactions ([d9e1131](https://github.com/blockstack/stacks-blockchain-api/commit/d9e1131f8371232129779813704548e266e1916f))
+* emit prometheus metrics for socket.io ([3100c56](https://github.com/blockstack/stacks-blockchain-api/commit/3100c5661e62fece6b33bfe2806940e3ea655425))
+* expose FT and NFT transfers in /extended/v1/address/[:principal]/transactions_with_transfers ([439d4f4](https://github.com/blockstack/stacks-blockchain-api/commit/439d4f46cdd9b8fcc3f6fa1016482a4df0a02129))
+* return git info in /extended/v1/status ([0538ae2](https://github.com/blockstack/stacks-blockchain-api/commit/0538ae297f5c5c211825b0a173be34ccf6e96353))
+* token metadata ([33f11bb](https://github.com/blockstack/stacks-blockchain-api/commit/33f11bbcf3345623fbc0ae5a96eec706a351ff05))
+
 ## [0.64.2](https://github.com/blockstack/stacks-blockchain-api/compare/v0.64.1...v0.64.2) (2021-08-20)
 
 

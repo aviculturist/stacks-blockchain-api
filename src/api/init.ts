@@ -40,6 +40,9 @@ import * as pathToRegex from 'path-to-regexp';
 import * as expressListEndpoints from 'express-list-endpoints';
 import { createMiddleware as createPrometheusMiddleware } from '@promster/express';
 import { createMicroblockRouter } from './routes/microblock';
+import { createStatusRouter } from './routes/status';
+import { createTokenRouter } from './routes/tokens/tokens';
+import { createFeeRateRouter } from './routes/fee-rate';
 
 export interface ApiServer {
   expressApp: ExpressWithAsync;
@@ -87,8 +90,16 @@ export async function startApiServer(opts: {
   }[] = [];
 
   if (isProdEnv) {
+    // The default from
+    // https://github.com/tdeekens/promster/blob/696803abf03a9a657d4af46d312fa9fb70a75320/packages/metrics/src/create-metric-types/create-metric-types.ts#L16
+    const defaultPromHttpRequestDurationInSeconds = [0.05, 0.1, 0.3, 0.5, 0.8, 1, 1.5, 2, 3, 10];
+
+    // Add a few more buckets to account for requests that take longer than 10 seconds
+    defaultPromHttpRequestDurationInSeconds.push(25, 50, 100, 250, 500);
+
     const promMiddleware = createPrometheusMiddleware({
       options: {
+        buckets: defaultPromHttpRequestDurationInSeconds as [number],
         normalizePath: path => {
           // Get the url pathname without a query string or fragment
           // (note base url doesn't matter, but required by URL constructor)
@@ -149,8 +160,10 @@ export async function startApiServer(opts: {
       router.use('/info', createInfoRouter(datastore));
       router.use('/stx_supply', createStxSupplyRouter(datastore));
       router.use('/debug', createDebugRouter(datastore));
-      router.use('/status', (req, res) => res.status(200).json({ status: 'ready' }));
+      router.use('/status', createStatusRouter(datastore));
+      router.use('/fee_rate', createFeeRateRouter(datastore));
       router.use('/faucets', createFaucetRouter(datastore));
+      router.use('/tokens', createTokenRouter(datastore));
       return router;
     })()
   );
@@ -163,7 +176,7 @@ export async function startApiServer(opts: {
       const router = addAsync(express.Router());
       router.use(cors());
       router.use('/prices', createBnsPriceRouter(datastore, chainId));
-      router.use('/', createCoreNodeRpcProxyRouter());
+      router.use('/', createCoreNodeRpcProxyRouter(datastore));
 
       return router;
     })()

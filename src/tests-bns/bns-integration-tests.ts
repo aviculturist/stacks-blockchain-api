@@ -5,9 +5,10 @@ import * as supertest from 'supertest';
 import { startEventServer } from '../event-stream/event-server';
 import { Server } from 'net';
 import { createHash } from 'crypto';
-import { DbMempoolTx, DbTx, DbTxStatus } from '../datastore/common';
+import { DbTx, DbTxStatus } from '../datastore/common';
 import { AnchorMode, ChainID, PostConditionMode, someCV } from '@stacks/transactions';
 import { StacksMocknet } from '@stacks/network';
+import * as assert from 'assert';
 
 import {
   broadcastTransaction,
@@ -61,15 +62,20 @@ describe('BNS integration tests', () => {
 
   function standByForTx(expectedTxId: string): Promise<DbTx> {
     const broadcastTx = new Promise<DbTx>(resolve => {
-      const listener: (info: DbTx | DbMempoolTx) => void = info => {
+      const listener: (txId: string) => void = async txId => {
+        const dbTxQuery = await api.datastore.getTx({ txId: txId, includeUnanchored: true });
+        if (!dbTxQuery.found) {
+          return;
+        }
+        const dbTx = dbTxQuery.result as DbTx;
         if (
-          info.tx_id === expectedTxId &&
-          (info.status === DbTxStatus.Success ||
-            info.status === DbTxStatus.AbortByResponse ||
-            info.status === DbTxStatus.AbortByPostCondition)
+          dbTx.tx_id === expectedTxId &&
+          (dbTx.status === DbTxStatus.Success ||
+            dbTx.status === DbTxStatus.AbortByResponse ||
+            dbTx.status === DbTxStatus.AbortByPostCondition)
         ) {
           api.datastore.removeListener('txUpdate', listener);
-          resolve(info as DbTx);
+          resolve(dbTx);
         }
       };
       api.datastore.addListener('txUpdate', listener);
@@ -111,6 +117,7 @@ describe('BNS integration tests', () => {
           validateWithAbi: true,
           postConditions: postConditions,
           network,
+          anchorMode: AnchorMode.Any,
         };
 
         const transaction = await makeContractCall(txOptions);
@@ -145,12 +152,13 @@ describe('BNS integration tests', () => {
             uintCV(1),
             uintCV(1),
             uintCV(1),
-            uintCV(12), //this number is set to expire the name before calling name-revewal
+            uintCV(20), //this number is set to expire the name before calling name-revewal
             standardPrincipalCV(address),
           ],
           senderKey: pkey,
           validateWithAbi: true,
           network,
+          anchorMode: AnchorMode.Any,
         };
 
         const revealTransaction = await makeContractCall(revealTxOptions);
@@ -180,6 +188,7 @@ describe('BNS integration tests', () => {
       senderKey: pkey,
       validateWithAbi: true,
       network,
+      anchorMode: AnchorMode.Any,
     };
     const transaction = await makeContractCall(txOptions);
     const body = {
@@ -203,7 +212,6 @@ describe('BNS integration tests', () => {
     expect(query.found).toBe(true);
     if (query.found) {
       expect(query.result.zonefile).toBe(zonefile);
-      expect(query.result.atch_resolved).toBe(true);
     }
   });
 
@@ -216,6 +224,7 @@ describe('BNS integration tests', () => {
       senderKey: pkey,
       validateWithAbi: true,
       network,
+      anchorMode: AnchorMode.Any,
     };
 
     const transaction = await makeContractCall(txOptions);
@@ -245,6 +254,7 @@ describe('BNS integration tests', () => {
       senderKey: pkey,
       validateWithAbi: true,
       network,
+      anchorMode: AnchorMode.Any,
     };
 
     const transaction = await makeContractCall(txOptions);
@@ -269,14 +279,14 @@ describe('BNS integration tests', () => {
       expect(query1.status).toBe(200);
       expect(query1.type).toBe('application/json');
       const query2 = await db.getSubdomain({ subdomain: `1yeardaily.${name}.${namespace}`, includeUnanchored: false });
-      expect(query2.found).toBe(true);
+      assert(query2.found);
       expect(query2.result.resolver).toBe('');
 
       const query3 = await supertest(api.server).get(`/v1/names/${name}.${namespace}`);
       expect(query3.status).toBe(200);
       expect(query3.type).toBe('application/json');
       expect(query3.body.zonefile).toBe(zonefile);
-    } catch (err) {
+    } catch (err: any) {
       throw new Error('Error post transaction: ' + err.message);
     }
   });
@@ -305,6 +315,7 @@ describe('BNS integration tests', () => {
       senderKey: pkey,
       validateWithAbi: true,
       network,
+      anchorMode: AnchorMode.Any,
     };
 
     const transaction = await makeContractCall(txOptions);
@@ -364,6 +375,7 @@ describe('BNS integration tests', () => {
       senderKey: pkey,
       validateWithAbi: true,
       network,
+      anchorMode: AnchorMode.Any,
     };
 
     const transaction = await makeContractCall(txOptions);
@@ -393,7 +405,7 @@ describe('BNS integration tests', () => {
       expect(query3.status).toBe(200);
       expect(query3.type).toBe('application/json');
       expect(query3.body.zonefile).toBe(zonefile);
-    } catch (err) {
+    } catch (err: any) {
       throw new Error('Error post transaction: ' + err.message);
     }
   });
@@ -415,6 +427,7 @@ describe('BNS integration tests', () => {
       validateWithAbi: true,
       postConditions: postConditions,
       network,
+      anchorMode: AnchorMode.Any,
     };
 
     const preOrderTransaction = await makeContractCall(preOrderTxOptions);
@@ -435,6 +448,7 @@ describe('BNS integration tests', () => {
       senderKey: pkey1,
       validateWithAbi: true,
       network,
+      anchorMode: AnchorMode.Any,
     };
 
     const transaction = await makeContractCall(txOptions);
@@ -462,11 +476,16 @@ describe('BNS integration tests', () => {
     expect(query.found).toBe(true);
     if (query.found) {
       expect(query.result.zonefile).toBe(zonefile);
-      expect(query.result.atch_resolved).toBe(true);
     }
   });
 
   test('name-transfer contract call', async () => {
+    //name owned by address before calling name-transfer
+    const query1 = await supertest(api.server).get(`/v1/names/${name}.${namespace}`);
+    expect(query1.status).toBe(200);
+    expect(query1.type).toBe('application/json');
+    expect(query1.body.address).toBe(address);
+
     //name transfer
     const txOptions: SignedContractCallOptions = {
       contractAddress: deployedTo,
@@ -508,7 +527,8 @@ describe('BNS integration tests', () => {
       expect(query1.type).toBe('application/json');
       expect(query1.body.zonefile).toBe('');
       expect(query1.body.status).toBe('name-transfer');
-    } catch (err) {
+      expect(query1.body.address).toBe(address2);
+    } catch (err: any) {
       throw new Error('Error post transaction: ' + err.message);
     }
   });
@@ -523,6 +543,7 @@ describe('BNS integration tests', () => {
       senderKey: pkey2,
       validateWithAbi: true,
       network,
+      anchorMode: AnchorMode.Any,
     };
 
     const transaction = await makeContractCall(txOptions);
@@ -566,6 +587,7 @@ describe('BNS integration tests', () => {
       senderKey: pkey1,
       validateWithAbi: true,
       network,
+      anchorMode: AnchorMode.Any,
     };
 
     const transaction = await makeContractCall(txOptions);
@@ -591,7 +613,7 @@ describe('BNS integration tests', () => {
       expect(query1.type).toBe('application/json');
       expect(query1.body.zonefile).toBe(zonefile);
       expect(query1.body.status).toBe('name-renewal');
-    } catch (err) {
+    } catch (err: any) {
       throw new Error('Error post transaction: ' + err.message);
     }
   });
@@ -630,7 +652,7 @@ describe('BNS integration tests', () => {
     });
 
     const dbquery = await db.getSubdomain({ subdomain: `flushreset.id.blockstack`, includeUnanchored: false });
-    expect(dbquery.found).toBe(true);
+    assert(dbquery.found)
     expect(dbquery.result.name).toBe('id.blockstack');
   });
 
